@@ -34,8 +34,6 @@ gridWorld.T(state2idx(gridWorld,gridWorld.TerminalStates),:,:) = 0;
 
 %% Monte Carlo Control
 % [P_MCES,Q_MCES] = monteCarloES(gridWorld,1,10000);
-[P_OPFVMCC,Q_OPFVMCC] = onPolicyFirstVisitMCControl(gridWorld,1,0.1,500000);
-save('P_OPFVMCC','P_OPFVMCC')
+% [P_OPFVMCC,Q_OPFVMCC] = onPolicyFirstVisitMCControl(gridWorld,1,0.1,500000);
 %% Simulate
-load P_OPFVMCC.mat
-simulate(gridWorld,P_OPFVMCC);
+% simulate(gridWorld,P_OPFVMCC);

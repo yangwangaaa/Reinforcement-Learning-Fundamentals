@@ -18,8 +18,12 @@ for episode = 1:numEpisodes
     % Counter to keep track of time step
     T = 0;
     
+    % Reset environment
+    env.reset;
+    env.CurrentState = '[3,2]';
+    
     % Initial state and action
-    s = state2idx(env,env.reset);
+    s = state2idx(env,env.CurrentState);
     [~,a] = max(P(s,:));
     
     % Variable to store the return after time step t

@@ -1,14 +1,19 @@
-function [P,Q] = onPolicyFirstVisitMCControl(env,gamma,epsilon,numEpisodes)
-% On-Policy First-Visit MC Control
-
-% Initialize arbitrary policy
-P = ones(numel(env.States),numel(env.Actions))/numel(env.Actions);
+function [P,Q] = offPolicyMCControl(env,gamma,numEpisodes)
+% Off-Policy MC Control
 
 % Variable to store state-action pair values
 Q = zeros(numel(env.States),numel(env.Actions));
 
-% Vector to store the returns at each state
-R = zeros(numel(env.States),numel(env.Actions));
+% Variable to store state-action pair C values for weighted importance
+% sampling
+C = zeros(numel(env.States),numel(env.Actions));
+
+% Initialize arbitrary policy 
+P = ones(numel(env.States),numel(env.Actions))/numel(env.Actions);
+
+% Generate behavior policy so that is has equal chance of selecting all
+% actions
+b = ones(numel(env.States),numel(env.Actions))/numel(env.Actions);
 
 for episode = 1:numEpisodes
     % Variable to store the data of each episode as
@@ -25,12 +30,9 @@ for episode = 1:numEpisodes
     env.reset;
     env.CurrentState = '[3,2]';
     
-    % Set tnitial state and action
+    % Set initial state and action
     s = state2idx(env,env.CurrentState);
     a = 1;
-    
-    % Variable to store the return after time step t
-    G = 0;
     
     % Generate an episode
     while T < 100
@@ -50,8 +52,14 @@ for episode = 1:numEpisodes
         
         % Sample an action (the best action will have the highest
         % probability)
-        a = randsample(1:numel(env.Actions),1,true,P(s,:)); 
+        a = randsample(1:numel(env.Actions),1,true,b(s,:)); 
     end
+    
+    % Variable to store the return after time step t
+    G = 0;
+    
+    % Variable to store the weights for weighted importance sampling
+    W = 1;
     
     % Loop backwards through each step of the episode
     for t = T:-1:1
@@ -67,28 +75,27 @@ for episode = 1:numEpisodes
         % Calculate the return after time step t
         G = gamma*G + r;
         
-        % Get all states visited prior to time step t
-        visitedSAPairs = episodeData(1:t - 1,1:2);
+        % Update using weighted importance sampling
+        C(s,a) = C(s,a) + W;
+        Q(s,a) = Q(s,a) + (W/C(s,a)) * (G - Q(s,a));
         
-        % Check if the state-action pair has not been visited
-        if ~ismember([s a],visitedSAPairs,'rows')
-            % Update state-action value function by adding new return to
-            % previous returns at (s,a) and averaging
-            R(s,a) = R(s,a) + G;
-            Q(s,a) = R(s,a)/episode;
-            
-            % Update the policy using the epsilon-greedy method
-            % Note: if there is more than one optimal action, just choose
-            % one arbitrarily
-            [~,bestAction] = max(Q(s,:));
-            P(s,:) = epsilon/numel(env.Actions);
-            P(s,bestAction) = 1 - epsilon + (epsilon/numel(env.Actions));
+        % Greedily update the policy
+        [~,bestAction] = max(Q(s,:));
+        P(s,:) = 0;
+        P(s,bestAction) = 1;
+        
+        W = W * P(s,a)/b(s,a);
+        
+        % Stop running if W = 0
+        if W == 0
+            break
         end
     end
     
     % To help visualize progress (optional)
     if mod(episode,100) == 0
         fprintf('Episode %d\n',episode);
+        Q
         P
     end
 end
